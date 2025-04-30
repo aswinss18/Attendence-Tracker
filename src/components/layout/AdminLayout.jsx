@@ -16,6 +16,7 @@ import {
   Sun,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
@@ -73,12 +74,12 @@ export default function AdminLayout({ children }) {
       >
         <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
           <Link href="/admin/dashboard" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">A</span>
+            <div className="flex items-center space-x-2">
+              <Image src="/icon.png" alt="Logo" width={40} height={40} />
+              <span className="font-poppins font-semibold text-2xl text-[#f27c1d] tracking-wide">
+                Checkmate
+              </span>
             </div>
-            <span className="text-xl font-bold text-gray-800 dark:text-white">
-              Admin Pro
-            </span>
           </Link>
           <button
             onClick={toggleSidebar}
