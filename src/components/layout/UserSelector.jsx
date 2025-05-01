@@ -307,7 +307,7 @@ export default function EmployeeAttendance() {
   }, [userAttendance]);
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="overflow-hidden bg-gray-50 dark:bg-gray-900 flex flex-col">
       {/* Header with theme toggle */}
       <motion.div
         className="bg-white dark:bg-gray-800 shadow-sm p-4 flex justify-between items-center"
@@ -318,17 +318,6 @@ export default function EmployeeAttendance() {
         <h1 className="text-xl font-bold text-gray-800 dark:text-white">
           Employee Attendance Dashboard
         </h1>
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setDarkMode(!darkMode)}
-          className="p-2 rounded-full bg-gray-100 dark:bg-gray-700"
-        >
-          {darkMode ? (
-            <Sun size={20} className="text-yellow-400" />
-          ) : (
-            <Moon size={20} className="text-gray-700" />
-          )}
-        </motion.button>
       </motion.div>
 
       {/* Main Content */}
