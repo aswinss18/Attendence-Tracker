@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -17,12 +17,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import avatarImage from "@/app/avatarImage.jpeg";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
   { name: "Users", icon: Users, href: "/admin/users" },
   { name: "Attendance", icon: CalendarDays, href: "/admin/attendence" },
-  { name: "Leave", icon: PlaneTakeoff, href: "/admin/leave" },
+  // { name: "Leave", icon: PlaneTakeoff, href: "/admin/leave" },
   { name: "Reports", icon: FileText, href: "/admin/reports" },
 ];
 
@@ -33,9 +34,9 @@ export default function AdminLayout({ children }) {
 
   // Mock user data
   const user = {
-    name: "Alex Johnson",
-    email: "alex.johnson@company.com",
-    avatar: "/api/placeholder/40/40",
+    name: "Aswin S S",
+    email: "ssaswin18@checkmate.com",
+    avatar: avatarImage,
     role: "Administrator",
   };
 
@@ -53,15 +54,12 @@ export default function AdminLayout({ children }) {
     }
   };
 
-  // Apply dark mode on initial render if needed
-  if (typeof window !== "undefined") {
-    // Run once on component mount
-    useState(() => {
-      if (darkMode) {
-        document.documentElement.classList.add("dark");
-      }
-    });
-  }
+  // Fix: Changed useState to useEffect for initial dark mode setting
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -75,7 +73,13 @@ export default function AdminLayout({ children }) {
         <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
           <Link href="/admin/dashboard" className="flex items-center space-x-2">
             <div className="flex items-center space-x-2">
-              <Image src="/icon.png" alt="Logo" width={40} height={40} />
+              <Image
+                src="/icon.png"
+                alt="Logo"
+                width={40}
+                height={40}
+                priority
+              />
               <span className="font-poppins font-semibold text-2xl text-[#f27c1d] tracking-wide">
                 Checkmate
               </span>
@@ -92,11 +96,16 @@ export default function AdminLayout({ children }) {
         <div className="p-4">
           <div className="mb-8">
             <div className="flex items-center space-x-3 mb-6 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-10 h-10 rounded-full"
-              />
+              <div className="relative w-10 h-10 rounded-full overflow-hidden">
+                <Image
+                  src={user.avatar}
+                  alt={user.name}
+                  fill
+                  sizes="40px"
+                  className="object-cover"
+                  priority
+                />
+              </div>
               <div>
                 <h3 className="font-medium text-sm text-gray-800 dark:text-white">
                   {user.name}
@@ -180,11 +189,16 @@ export default function AdminLayout({ children }) {
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                   className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-8 h-8 rounded-full"
-                  />
+                  <div className="relative w-8 h-8 rounded-full overflow-hidden">
+                    <Image
+                      src={user.avatar}
+                      alt={user.name}
+                      fill
+                      sizes="32px"
+                      className="object-cover"
+                      priority
+                    />
+                  </div>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden md:block">
                     {user.email}
                   </span>

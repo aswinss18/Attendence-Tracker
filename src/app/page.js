@@ -1,101 +1,211 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+// Firebase imports
+import { initializeApp } from "firebase/app";
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+} from "firebase/auth";
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+// Initialize Firebase (replace with your config)
+const firebaseConfig = {
+  // Your Firebase config here
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+
+// Initialize Firebase app
+let app;
+let auth;
+let provider;
+
+export default function Home() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Initialize Firebase on client side only
+  useEffect(() => {
+    // Initialize Firebase only once
+    if (!app) {
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      provider = new GoogleAuthProvider();
+    }
+
+    // Check if user is already logged in
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.push("/admin/dashboard");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const result = await signInWithPopup(auth, provider);
+      // Successfully logged in, redirect will happen automatically via useEffect
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("Failed to login. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        when: "beforeChildren",
+        staggerChildren: 0.2,
+        duration: 0.8,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { duration: 0.5 } },
+  };
+
+  const buttonVariants = {
+    hover: {
+      scale: 1.05,
+      boxShadow: "0px 5px 15px rgba(0, 0, 0, 0.1)",
+    },
+    tap: { scale: 0.95 },
+  };
+
+  return (
+    <div className="flex items-center justify-center h-[49rem] bg-gray-100 dark:bg-gray-900 dark:to-gray p-4">
+      <motion.div
+        className="flex flex-col items-center bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 w-full max-w-md"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div variants={itemVariants} className="mb-6">
+          <Image
+            src="/icon.png"
+            alt="Next.js logo"
+            width={120}
+            height={25}
+            priority
+          />
+        </motion.div>
+
+        <motion.h1
+          variants={itemVariants}
+          className="text-2xl font-bold mb-6 text-gray-800 dark:text-white"
+        >
+          Welcome Back
+        </motion.h1>
+
+        <motion.p
+          variants={itemVariants}
+          className="text-gray-600 dark:text-gray-300 text-center mb-8"
+        >
+          Sign in to access your dashboard
+        </motion.p>
+
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full p-3 mb-4 bg-red-100 text-red-700 rounded-lg text-sm"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+            {error}
+          </motion.div>
+        )}
+
+        <motion.button
+          variants={buttonVariants}
+          whileHover="hover"
+          whileTap="tap"
+          disabled={isLoading}
+          onClick={handleGoogleLogin}
+          className="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white text-gray-700 dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg font-medium transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-70"
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          {isLoading ? (
+            <svg
+              className="animate-spin h-5 w-5 text-gray-700 dark:text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+          ) : (
+            <>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 48 48"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"
+                  fill="#FFC107"
+                />
+                <path
+                  d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"
+                  fill="#FF3D00"
+                />
+                <path
+                  d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"
+                  fill="#4CAF50"
+                />
+                <path
+                  d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"
+                  fill="#1976D2"
+                />
+              </svg>
+              Sign in with Google
+            </>
+          )}
+        </motion.button>
+
+        <motion.div
+          variants={itemVariants}
+          className="flex items-center gap-2 mt-8 text-sm text-gray-500 dark:text-gray-400"
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <div className="w-8 h-px bg-gray-300 dark:bg-gray-600"></div>
+          <span>Secure login</span>
+          <div className="w-8 h-px bg-gray-300 dark:bg-gray-600"></div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
