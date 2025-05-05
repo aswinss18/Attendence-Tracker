@@ -20,15 +20,14 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import avatarImage from "@/app/avatarImage.jpeg";
-import { signOut } from "@/lib/auth";
+import { signOut, subscribeToAuthChanges } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import CustomToast from "../common/Toast";
+import CustomToast from "@/components/common/Toast";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
   { name: "Users", icon: Users, href: "/admin/users" },
   { name: "Attendance", icon: CalendarDays, href: "/admin/attendence" },
-  // { name: "Leave", icon: PlaneTakeoff, href: "/admin/leave" },
   { name: "Reports", icon: FileText, href: "/admin/reports" },
 ];
 
@@ -83,6 +82,8 @@ export default function AdminLayout({ children }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   const notificationRef = useRef(null);
@@ -94,13 +95,41 @@ export default function AdminLayout({ children }) {
     setNotificationCount(unreadCount);
   }, [notifications]);
 
-  // Mock user data
-  const user = {
-    name: "Aswin S S",
-    email: "ssaswin18@checkmate.com",
-    avatar: avatarImage,
-    role: "Administrator",
-  };
+  // Authentication listener setup
+  useEffect(() => {
+    // Only run on client-side
+    if (typeof window === "undefined") return;
+
+    setIsLoading(true);
+
+    const unsubscribe = subscribeToAuthChanges((currentUser) => {
+      setUser(currentUser);
+      setIsLoading(false);
+
+      // Redirect to home if not authenticated and not in loading state
+      if (!currentUser && !isLoading) {
+        router.push("/");
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, [router]); // Only depend on router
+
+  // Fallback user data when real auth data is unavailable
+  const displayUser = user
+    ? {
+        name: user.displayName || "User",
+        email: user.email || "user@example.com",
+        avatar: user.photoURL || avatarImage,
+        role: "Administrator",
+      }
+    : {
+        name: "Aswin S S",
+        email: "ssaswin18@checkmate.com",
+        avatar: avatarImage,
+        role: "Administrator",
+      };
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -125,10 +154,15 @@ export default function AdminLayout({ children }) {
   };
 
   const handleLogout = async () => {
-    const response = await signOut();
-    router.push("/");
-
-    CustomToast;
+    try {
+      await signOut();
+      router.push("/");
+      // You can display the toast here if needed
+      // CustomToast({ message: "Logged out successfully", type: "success" });
+    } catch (error) {
+      console.error("Logout error:", error);
+      // CustomToast({ message: "Logout failed", type: "error" });
+    }
   };
 
   const markAsRead = (id) => {
@@ -158,12 +192,24 @@ export default function AdminLayout({ children }) {
     };
   }, []);
 
-  // Fix: Changed useState to useEffect for initial dark mode setting
+  // Initial dark mode setting
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add("dark");
     }
   }, []);
+
+  // Handle loading or unauthenticated state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Get notification icon based on type
   const getNotificationIcon = (type) => {
@@ -202,291 +248,304 @@ export default function AdminLayout({ children }) {
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* Sidebar */}
-      <motion.div
-        className={`fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-all duration-300 ease-in-out ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 lg:static`}
-        initial={false}
-      >
-        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-          <Link href="/admin/dashboard" className="flex items-center space-x-2">
-            <div className="flex items-center space-x-2">
-              <Image
-                src="/icon.png"
-                alt="Logo"
-                width={40}
-                height={40}
-                priority
-              />
-              <span className="font-poppins font-semibold text-2xl text-[#f27c1d] tracking-wide">
-                Checkmate
-              </span>
-            </div>
-          </Link>
-          <button
-            onClick={toggleSidebar}
-            className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
-          >
-            <X size={20} className="text-gray-500 dark:text-gray-400" />
-          </button>
-        </div>
-
-        <div className="p-4">
-          <div className="mb-8">
-            <div className="flex items-center space-x-3 mb-6 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div className="relative w-10 h-10 rounded-full overflow-hidden">
+      {user && (
+        <motion.div
+          className={`fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-all duration-300 ease-in-out ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } lg:translate-x-0 lg:static`}
+          initial={false}
+        >
+          <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+            <Link
+              href="/admin/dashboard"
+              className="flex items-center space-x-2"
+            >
+              <div className="flex items-center space-x-2">
                 <Image
-                  src={user.avatar}
-                  alt={user.name}
-                  fill
-                  sizes="40px"
-                  className="object-cover"
+                  src="/icon.png"
+                  alt="Logo"
+                  width={40}
+                  height={40}
                   priority
                 />
+                <span className="font-poppins font-semibold text-2xl text-[#f27c1d] tracking-wide">
+                  Checkmate
+                </span>
               </div>
-              <div>
-                <h3 className="font-medium text-sm text-gray-800 dark:text-white">
-                  {user.name}
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {user.role}
-                </p>
-              </div>
-            </div>
+            </Link>
+            <button
+              onClick={toggleSidebar}
+              className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
+            >
+              <X size={20} className="text-gray-500 dark:text-gray-400" />
+            </button>
           </div>
 
-          <nav className="space-y-1">
-            {navItems.map(({ name, icon: Icon, href }, idx) => (
-              <Link
-                key={name}
-                href={href}
-                className="flex items-center space-x-3 p-3 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors group"
-              >
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100 dark:group-hover:bg-gray-600 transition-colors">
-                  <Icon size={18} />
+          <div className="p-4">
+            <div className="mb-8">
+              <div className="flex items-center space-x-3 mb-6 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="relative w-10 h-10 rounded-full overflow-hidden">
+                  <Image
+                    src={displayUser.avatar}
+                    alt={displayUser.name}
+                    fill
+                    sizes="40px"
+                    className="object-cover"
+                    priority
+                  />
                 </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  {name}
-                </span>
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t dark:border-gray-700">
-          <button
-            onClick={handleLogout}
-            className="flex items-center space-x-3 w-full p-3 rounded-lg hover:bg-red-50 dark:hover:bg-gray-700 transition-colors group"
-          >
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 group-hover:bg-red-100 dark:group-hover:bg-gray-600 transition-colors">
-              <LogOut size={18} />
+                <div>
+                  <h3 className="font-medium text-sm text-gray-800 dark:text-white">
+                    {displayUser.name}
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {displayUser.role}
+                  </p>
+                </div>
+              </div>
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-              Log Out
-            </span>
-          </button>
-        </div>
-      </motion.div>
+
+            <nav className="space-y-1">
+              {navItems.map(({ name, icon: Icon, href }, idx) => (
+                <Link
+                  key={name}
+                  href={href}
+                  className="flex items-center space-x-3 p-3 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors group"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100 dark:group-hover:bg-gray-600 transition-colors">
+                    <Icon size={18} />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {name}
+                  </span>
+                </Link>
+              ))}
+            </nav>
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t dark:border-gray-700">
+            <button
+              onClick={handleLogout}
+              className="flex items-center space-x-3 w-full p-3 rounded-lg hover:bg-red-50 dark:hover:bg-gray-700 transition-colors group"
+            >
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 group-hover:bg-red-100 dark:group-hover:bg-gray-600 transition-colors">
+                <LogOut size={18} />
+              </div>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                Log Out
+              </span>
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
         {/* Top Header */}
-        <header className="bg-white dark:bg-gray-800 shadow-sm z-10">
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={toggleSidebar}
-                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
-              >
-                <Menu size={20} className="text-gray-500 dark:text-gray-400" />
-              </button>
-              <h1 className="text-xl font-semibold text-gray-800 dark:text-white">
-                Welcome, {user.name}
-              </h1>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={toggleDarkMode}
-                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                {darkMode ? (
-                  <Sun size={20} className="text-gray-500 dark:text-gray-400" />
-                ) : (
-                  <Moon size={20} className="text-gray-500" />
-                )}
-              </button>
-
-              {/* Notification Button */}
-              <div className="relative" ref={notificationRef}>
+        {user && (
+          <header className="bg-white dark:bg-gray-800 shadow-sm z-10">
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center space-x-3">
                 <button
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
+                  onClick={toggleSidebar}
+                  className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
                 >
-                  <Bell
+                  <Menu
                     size={20}
                     className="text-gray-500 dark:text-gray-400"
                   />
-                  {notificationCount > 0 && (
-                    <span className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full transform scale-90">
-                      {notificationCount}
-                    </span>
-                  )}
                 </button>
-
-                {/* Notification Panel */}
-                <AnimatePresence>
-                  {showNotifications && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden z-50"
-                    >
-                      <div className="p-3 border-b dark:border-gray-700 flex items-center justify-between">
-                        <h3 className="font-medium text-gray-800 dark:text-white">
-                          Notifications
-                        </h3>
-                        <button
-                          onClick={markAllAsRead}
-                          className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
-                        >
-                          Mark all as read
-                        </button>
-                      </div>
-
-                      <div className="max-h-72 overflow-y-auto">
-                        {notifications.length > 0 ? (
-                          <div>
-                            {notifications.map((notification) => (
-                              <motion.div
-                                key={notification.id}
-                                initial={{ x: -10, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                transition={{ duration: 0.2 }}
-                                className={`p-3 border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
-                                  !notification.read
-                                    ? "bg-indigo-50 dark:bg-gray-750"
-                                    : ""
-                                }`}
-                                onClick={() => markAsRead(notification.id)}
-                              >
-                                <div className="flex items-start space-x-3">
-                                  {getNotificationIcon(notification.type)}
-                                  <div className="flex-1 min-w-0">
-                                    <p
-                                      className={`text-sm font-medium ${
-                                        !notification.read
-                                          ? "text-gray-900 dark:text-white"
-                                          : "text-gray-700 dark:text-gray-300"
-                                      }`}
-                                    >
-                                      {notification.title}
-                                    </p>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">
-                                      {notification.message}
-                                    </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                                      {notification.time}
-                                    </p>
-                                  </div>
-                                  {!notification.read && (
-                                    <span className="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 mt-1"></span>
-                                  )}
-                                </div>
-                              </motion.div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                            No notifications
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="p-2 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-750 text-center">
-                        <Link
-                          href="/admin/notifications"
-                          className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
-                        >
-                          View all notifications
-                        </Link>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                <h1 className="text-xl font-semibold text-gray-800 dark:text-white">
+                  Welcome, {displayUser.name}
+                </h1>
               </div>
 
-              {/* Profile Menu */}
-              <div className="relative" ref={profileRef}>
+              <div className="flex items-center space-x-4">
                 <button
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={toggleDarkMode}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
-                  <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                    <Image
-                      src={user.avatar}
-                      alt={user.name}
-                      fill
-                      sizes="32px"
-                      className="object-cover"
-                      priority
+                  {darkMode ? (
+                    <Sun
+                      size={20}
+                      className="text-gray-500 dark:text-gray-400"
                     />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden md:block">
-                    {user.email}
-                  </span>
-                  <ChevronRight
-                    size={16}
-                    className={`text-gray-500 dark:text-gray-400 transition-transform ${
-                      showProfileMenu ? "rotate-90" : ""
-                    }`}
-                  />
+                  ) : (
+                    <Moon size={20} className="text-gray-500" />
+                  )}
                 </button>
 
-                <AnimatePresence>
-                  {showProfileMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-1 z-50"
-                    >
-                      <div className="px-4 py-2 border-b dark:border-gray-700">
-                        <p className="text-sm font-medium text-gray-800 dark:text-white">
-                          {user.name}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {user.email}
-                        </p>
-                      </div>
-                      <a
-                        href="#"
-                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                {/* Notification Button */}
+                <div className="relative" ref={notificationRef}>
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
+                  >
+                    <Bell
+                      size={20}
+                      className="text-gray-500 dark:text-gray-400"
+                    />
+                    {notificationCount > 0 && (
+                      <span className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full transform scale-90">
+                        {notificationCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Notification Panel */}
+                  <AnimatePresence>
+                    {showNotifications && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden z-50"
                       >
-                        Profile Settings
-                      </a>
-                      <a
-                        href="#"
-                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        <div className="p-3 border-b dark:border-gray-700 flex items-center justify-between">
+                          <h3 className="font-medium text-gray-800 dark:text-white">
+                            Notifications
+                          </h3>
+                          <button
+                            onClick={markAllAsRead}
+                            className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+                          >
+                            Mark all as read
+                          </button>
+                        </div>
+
+                        <div className="max-h-72 overflow-y-auto">
+                          {notifications.length > 0 ? (
+                            <div>
+                              {notifications.map((notification) => (
+                                <motion.div
+                                  key={notification.id}
+                                  initial={{ x: -10, opacity: 0 }}
+                                  animate={{ x: 0, opacity: 1 }}
+                                  transition={{ duration: 0.2 }}
+                                  className={`p-3 border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
+                                    !notification.read
+                                      ? "bg-indigo-50 dark:bg-gray-750"
+                                      : ""
+                                  }`}
+                                  onClick={() => markAsRead(notification.id)}
+                                >
+                                  <div className="flex items-start space-x-3">
+                                    {getNotificationIcon(notification.type)}
+                                    <div className="flex-1 min-w-0">
+                                      <p
+                                        className={`text-sm font-medium ${
+                                          !notification.read
+                                            ? "text-gray-900 dark:text-white"
+                                            : "text-gray-700 dark:text-gray-300"
+                                        }`}
+                                      >
+                                        {notification.title}
+                                      </p>
+                                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">
+                                        {notification.message}
+                                      </p>
+                                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                        {notification.time}
+                                      </p>
+                                    </div>
+                                    {!notification.read && (
+                                      <span className="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 mt-1"></span>
+                                    )}
+                                  </div>
+                                </motion.div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                              No notifications
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="p-2 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-750 text-center">
+                          <Link
+                            href="/admin/notifications"
+                            className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+                          >
+                            View all notifications
+                          </Link>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Profile Menu */}
+                <div className="relative" ref={profileRef}>
+                  <button
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <div className="relative w-8 h-8 rounded-full overflow-hidden">
+                      <Image
+                        src={displayUser.avatar}
+                        alt={displayUser.name}
+                        fill
+                        sizes="32px"
+                        className="object-cover"
+                        priority
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden md:block">
+                      {displayUser.email}
+                    </span>
+                    <ChevronRight
+                      size={16}
+                      className={`text-gray-500 dark:text-gray-400 transition-transform ${
+                        showProfileMenu ? "rotate-90" : ""
+                      }`}
+                    />
+                  </button>
+
+                  <AnimatePresence>
+                    {showProfileMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-1 z-50"
                       >
-                        Account Settings
-                      </a>
-                      <a
-                        href="#"
-                        className="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        Log Out
-                      </a>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                        <div className="px-4 py-2 border-b dark:border-gray-700">
+                          <p className="text-sm font-medium text-gray-800 dark:text-white">
+                            {displayUser.name}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {displayUser.email}
+                          </p>
+                        </div>
+                        <Link
+                          href="/admin/profile"
+                          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          Profile Settings
+                        </Link>
+                        <Link
+                          href="/admin/account"
+                          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          Account Settings
+                        </Link>
+                        <button
+                          onClick={handleLogout}
+                          className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          Log Out
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-4">
