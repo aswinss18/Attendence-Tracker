@@ -20,6 +20,9 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import avatarImage from "@/app/avatarImage.jpeg";
+import { signOut } from "@/lib/auth";
+import { useRouter } from "next/navigation";
+import CustomToast from "../common/Toast";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
@@ -80,6 +83,7 @@ export default function AdminLayout({ children }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [notificationCount, setNotificationCount] = useState(0);
+  const router = useRouter();
 
   const notificationRef = useRef(null);
   const profileRef = useRef(null);
@@ -118,6 +122,13 @@ export default function AdminLayout({ children }) {
       read: true,
     }));
     setNotifications(updatedNotifications);
+  };
+
+  const handleLogout = async () => {
+    const response = await signOut();
+    router.push("/");
+
+    CustomToast;
   };
 
   const markAsRead = (id) => {
@@ -264,7 +275,7 @@ export default function AdminLayout({ children }) {
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t dark:border-gray-700">
           <button
-            onClick={() => {}}
+            onClick={handleLogout}
             className="flex items-center space-x-3 w-full p-3 rounded-lg hover:bg-red-50 dark:hover:bg-gray-700 transition-colors group"
           >
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 group-hover:bg-red-100 dark:group-hover:bg-gray-600 transition-colors">

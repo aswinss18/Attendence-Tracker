@@ -4,50 +4,32 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { signInWithGoogle, subscribeToAuthChanges } from "@/lib/auth";
 
-// Firebase imports
-import { initializeApp } from "firebase/app";
-import {
-  getAuth,
-  signInWithPopup,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-} from "firebase/auth";
-
-// Initialize Firebase (replace with your config)
-const firebaseConfig = {
-  // Your Firebase config here
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
-};
-
-// Initialize Firebase app
-let app;
-let auth;
-let provider;
+// List of allowed email addresses
+const ALLOWED_EMAILS = ["aswinss0018@gmail.com", "exapmple@dffg.com"];
 
 export default function Home() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Initialize Firebase on client side only
+  // Check if user is already logged in
   useEffect(() => {
-    // Initialize Firebase only once
-    if (!app) {
-      app = initializeApp(firebaseConfig);
-      auth = getAuth(app);
-      provider = new GoogleAuthProvider();
-    }
-
-    // Check if user is already logged in
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = subscribeToAuthChanges((user) => {
       if (user) {
-        router.push("/admin/dashboard");
+        // Check if the logged-in user's email is in the allowed list
+        if (ALLOWED_EMAILS.includes(user.email)) {
+          router.push("/admin/dashboard");
+        } else {
+          // Sign out unauthorized users
+          import("@/lib/auth").then(({ signOut }) => {
+            signOut();
+            setError(
+              "Access denied. You are not authorized to access this site."
+            );
+          });
+        }
       }
     });
 
@@ -59,10 +41,17 @@ export default function Home() {
     setError("");
 
     try {
-      const result = await signInWithPopup(auth, provider);
-      // Successfully logged in, redirect will happen automatically via useEffect
+      const result = await signInWithGoogle();
+
+      // Check if the user's email is in the allowed list
+      if (result?.user && !ALLOWED_EMAILS.includes(result.user.email)) {
+        // Sign out unauthorized users
+        const { signOut } = await import("@/lib/auth");
+        await signOut();
+        setError("Access denied. You are not authorized to access this site.");
+      }
+      // If authorized, the redirect will happen automatically via useEffect
     } catch (error) {
-      console.error("Login error:", error);
       setError("Failed to login. Please try again.");
     } finally {
       setIsLoading(false);
