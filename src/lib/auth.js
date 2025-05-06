@@ -8,19 +8,21 @@ import {
   onAuthStateChanged,
   signOut as firebaseSignOut,
 } from "firebase/auth";
+import { getFirestore } from "firebase/firestore"; // ✅ Import Firestore
 import { firebaseConfig } from "@/config/firebase";
 
-// Initialize Firebase only on client-side
-let auth;
+// Firebase app and services
 let app;
+let auth;
+let db; // ✅ Firestore instance
 
-// Initialize Firebase only on the client side
+// Initialize Firebase only on client-side
 if (typeof window !== "undefined") {
-  // Prevent multiple initializations
   if (!app) {
     app = initializeApp(firebaseConfig);
   }
   auth = getAuth(app);
+  db = getFirestore(app); // ✅ Initialize Firestore
 }
 
 // List of allowed email addresses
@@ -73,7 +75,6 @@ export const signOut = async () => {
  */
 export const subscribeToAuthChanges = (callback) => {
   if (!auth) return () => {};
-
   return onAuthStateChanged(auth, callback);
 };
 
@@ -95,5 +96,5 @@ export const isAuthenticated = () => {
   return !!auth.currentUser;
 };
 
-// Export auth object for direct access if needed
-export { auth };
+// Export auth and db objects for direct access if needed
+export { auth, db };
