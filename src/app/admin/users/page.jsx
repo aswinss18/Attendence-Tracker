@@ -5,6 +5,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 
 import { User, Mail, Key, Calendar, FileText, Save, X } from "lucide-react";
+import { addUser } from "@/controllers/functions";
+import toast from "react-hot-toast";
 
 const AddUser = () => {
   const [formData, setFormData] = useState({
@@ -18,7 +20,6 @@ const AddUser = () => {
     notes: "",
   });
 
-  const [toast, setToast] = useState(null);
   const roles = ["Employee", "Manager", "HR"];
 
   const [errors, setErrors] = useState({});
@@ -50,16 +51,19 @@ const AddUser = () => {
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
     } else {
-      console.log("User Added", formData);
-      // Redirect to manage users page or show success message
-      router.push("/admin/manage-users");
+      try {
+        const response = await addUser(formData);
+        toast.success("User added successfully!");
+      } catch (error) {
+        toast.error(error.message || "Failed to add user");
+      }
     }
   };
 
@@ -81,13 +85,6 @@ const AddUser = () => {
 
   return (
     <div className="mx-auto p-6 transition-colors duration-300 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-[80vh]">
-      {toast && (
-        <CustomToast
-          message={toast.msg}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
       <div className="flex justify-between items-center mb-8">
         <motion.h1
           className="text-3xl font-bold"
