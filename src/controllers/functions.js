@@ -23,8 +23,17 @@ import {
  */
 export const addUser = async (userData) => {
   try {
-    // Create a new user document with auto-generated ID
     const userRef = collection(db, "users");
+
+    // Step 1: Check for existing email
+    const emailQuery = query(userRef, where("email", "==", userData.email));
+    const emailSnapshot = await getDocs(emailQuery);
+
+    if (!emailSnapshot.empty) {
+      throw new Error("Email already exists. Please use a different email.");
+    }
+
+    // Step 2: Add the user
     const newUserData = {
       ...userData,
       createdAt: serverTimestamp(),
@@ -32,7 +41,17 @@ export const addUser = async (userData) => {
     };
 
     const docRef = await addDoc(userRef, newUserData);
-    return docRef.id;
+    const userId = docRef.id;
+
+    // Step 3: Create empty attendance record
+    const attendanceRef = collection(db, "attendances");
+    const attendanceData = {
+      userId: userId,
+      attendances: [],
+    };
+    await addDoc(attendanceRef, attendanceData);
+
+    return userId;
   } catch (error) {
     console.error("Error adding user: ", error);
     throw error;

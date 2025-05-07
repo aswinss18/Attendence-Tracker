@@ -59,6 +59,7 @@ const AddUser = () => {
       setErrors(validationErrors);
     } else {
       try {
+        console.log(formData);
         const response = await addUser(formData);
         toast.success("User added successfully!");
       } catch (error) {
