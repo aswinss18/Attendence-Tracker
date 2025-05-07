@@ -15,6 +15,8 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
+import toast from "react-hot-toast";
+import { getAllUsers } from "@/controllers/functions";
 
 // Simulated data - would be imported in real app
 const users = [
@@ -153,16 +155,31 @@ export default function EmployeeAttendance() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [userAttendance, setUserAttendance] = useState(null);
   const [selectedDay, setSelectedDay] = useState(null);
+  const [usersData, setUsersData] = useState([]);
 
   // Filter users based on search query
   const filteredUsers = useMemo(() => {
-    return users.filter(
+    return usersData.filter(
       (user) =>
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.role.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [searchQuery]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await getAllUsers();
+        console.log(response);
+        setUsersData(response);
+      } catch (error) {
+        toast.error("Failed to fetch users");
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {

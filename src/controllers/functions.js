@@ -214,6 +214,30 @@ export const getUserAttendanceByDateRange = async (
   }
 };
 
+export const getAttendanceByUserId = async (userId) => {
+  try {
+    const attendanceRef = collection(db, "attendances");
+
+    // Query attendance where userId matches
+    const attendanceQuery = query(attendanceRef, where("userId", "==", userId));
+    const attendanceSnapshot = await getDocs(attendanceQuery);
+
+    if (attendanceSnapshot.empty) {
+      throw new Error("No attendance record found for this user.");
+    }
+
+    // Assuming userId is unique, return the first (and only) document
+    const attendanceDoc = attendanceSnapshot.docs[0];
+    return {
+      id: attendanceDoc.id,
+      ...attendanceDoc.data(),
+    };
+  } catch (error) {
+    console.error("Error fetching attendance: ", error);
+    throw error;
+  }
+};
+
 /**
  * Update an attendance record
  * @param {string} attendanceId - ID of the attendance record
