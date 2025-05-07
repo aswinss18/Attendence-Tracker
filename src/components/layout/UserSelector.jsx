@@ -16,7 +16,7 @@ import {
   Sun,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { getAllUsers } from "@/controllers/functions";
+import { getAllUsers, getAttendanceByUserId } from "@/controllers/functions";
 
 // Simulated data - would be imported in real app
 // const users = [
@@ -57,93 +57,93 @@ import { getAllUsers } from "@/controllers/functions";
 //   },
 // ];
 
-const usersAttendance = [
-  {
-    userId: "1",
-    attendances: [
-      {
-        _id: "a1",
-        date: "2025-04-29",
-        status: "present",
-        checkIn: "2025-04-29T09:05:00",
-        checkOut: "2025-04-29T17:15:00",
-      },
-      {
-        _id: "a2",
-        date: "2025-04-28",
-        status: "present",
-        checkIn: "2025-04-28T08:55:00",
-        checkOut: "2025-04-28T17:30:00",
-      },
-      {
-        _id: "a3",
-        date: "2025-04-27",
-        status: "remote",
-        checkIn: "2025-04-27T09:30:00",
-        checkOut: "2025-04-27T18:00:00",
-      },
-      {
-        _id: "a4",
-        date: "2025-04-26",
-        status: "absent",
-        notes: "Family emergency",
-      },
-    ],
-  },
-  {
-    userId: "2",
-    attendances: [
-      { _id: "b1", date: "2025-04-29", status: "absent", notes: "Sick leave" },
-      {
-        _id: "b2",
-        date: "2025-04-28",
-        status: "remote",
-        checkIn: "2025-04-28T09:25:00",
-        checkOut: "2025-04-28T17:45:00",
-      },
-      {
-        _id: "b3",
-        date: "2025-04-27",
-        status: "remote",
-        checkIn: "2025-04-27T09:15:00",
-        checkOut: "2025-04-27T18:10:00",
-      },
-      {
-        _id: "b4",
-        date: "2025-04-26",
-        status: "present",
-        checkIn: "2025-04-26T09:00:00",
-        checkOut: "2025-04-26T17:00:00",
-      },
-      {
-        _id: "b5",
-        date: "2025-03-03",
-        status: "present",
-        checkIn: "2025-03-03T14:45:00",
-        checkOut: "2025-03-03T23:15:00",
-      },
-    ],
-  },
-  {
-    userId: "3",
-    attendances: [
-      {
-        _id: "c1",
-        date: "2025-04-29",
-        status: "present",
-        checkIn: "2025-04-29T08:50:00",
-        checkOut: "2025-04-29T16:50:00",
-      },
-      {
-        _id: "c2",
-        date: "2025-04-28",
-        status: "present",
-        checkIn: "2025-04-28T08:45:00",
-        checkOut: "2025-04-28T16:55:00",
-      },
-    ],
-  },
-];
+// const usersAttendance = [
+//   {
+//     userId: "1",
+//     attendances: [
+//       {
+//         _id: "a1",
+//         date: "2025-04-29",
+//         status: "present",
+//         checkIn: "2025-04-29T09:05:00",
+//         checkOut: "2025-04-29T17:15:00",
+//       },
+//       {
+//         _id: "a2",
+//         date: "2025-04-28",
+//         status: "present",
+//         checkIn: "2025-04-28T08:55:00",
+//         checkOut: "2025-04-28T17:30:00",
+//       },
+//       {
+//         _id: "a3",
+//         date: "2025-04-27",
+//         status: "remote",
+//         checkIn: "2025-04-27T09:30:00",
+//         checkOut: "2025-04-27T18:00:00",
+//       },
+//       {
+//         _id: "a4",
+//         date: "2025-04-26",
+//         status: "absent",
+//         notes: "Family emergency",
+//       },
+//     ],
+//   },
+//   {
+//     userId: "2",
+//     attendances: [
+//       { _id: "b1", date: "2025-04-29", status: "absent", notes: "Sick leave" },
+//       {
+//         _id: "b2",
+//         date: "2025-04-28",
+//         status: "remote",
+//         checkIn: "2025-04-28T09:25:00",
+//         checkOut: "2025-04-28T17:45:00",
+//       },
+//       {
+//         _id: "b3",
+//         date: "2025-04-27",
+//         status: "remote",
+//         checkIn: "2025-04-27T09:15:00",
+//         checkOut: "2025-04-27T18:10:00",
+//       },
+//       {
+//         _id: "b4",
+//         date: "2025-04-26",
+//         status: "present",
+//         checkIn: "2025-04-26T09:00:00",
+//         checkOut: "2025-04-26T17:00:00",
+//       },
+//       {
+//         _id: "b5",
+//         date: "2025-03-03",
+//         status: "present",
+//         checkIn: "2025-03-03T14:45:00",
+//         checkOut: "2025-03-03T23:15:00",
+//       },
+//     ],
+//   },
+//   {
+//     userId: "3",
+//     attendances: [
+//       {
+//         _id: "c1",
+//         date: "2025-04-29",
+//         status: "present",
+//         checkIn: "2025-04-29T08:50:00",
+//         checkOut: "2025-04-29T16:50:00",
+//       },
+//       {
+//         _id: "c2",
+//         date: "2025-04-28",
+//         status: "present",
+//         checkIn: "2025-04-28T08:45:00",
+//         checkOut: "2025-04-28T16:55:00",
+//       },
+//     ],
+//   },
+// ];
 
 export default function EmployeeAttendance() {
   const [darkMode, setDarkMode] = useState(false);
@@ -206,15 +206,26 @@ export default function EmployeeAttendance() {
 
   // Effect to fetch attendance data when user is selected
   useEffect(() => {
-    if (selectedUser) {
-      const attendanceData = usersAttendance.find(
-        (data) => data.userId === selectedUser._id
-      );
-      setUserAttendance(attendanceData || null);
-    } else {
-      setUserAttendance(null);
-    }
+    const fetchAttendance = async () => {
+      if (selectedUser && selectedUser._id) {
+        try {
+          console.log("starting");
+          const attendanceData = await getAttendanceByUserId(selectedUser._id);
+          console.log(attendanceData, " attendanceData?.attendances);");
+          setUserAttendance(attendanceData || null);
+        } catch (error) {
+          console.error("Error fetching attendance:", error);
+          setUserAttendance(null);
+        }
+      } else {
+        setUserAttendance(null);
+      }
+    };
+
+    fetchAttendance();
   }, [selectedUser]);
+
+  // console.log("selectedUser", selectedUser, "userAttendance", userAttendance);
 
   // Generate calendar data for contribution graph
   const calendarData = useMemo(() => {
