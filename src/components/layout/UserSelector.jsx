@@ -19,43 +19,43 @@ import toast from "react-hot-toast";
 import { getAllUsers } from "@/controllers/functions";
 
 // Simulated data - would be imported in real app
-const users = [
-  {
-    _id: "1",
-    name: "Sarah Johnson",
-    email: "sarah@example.com",
-    role: "Product Manager",
-    joinedDate: "2023-05-12",
-  },
-  {
-    _id: "2",
-    name: "David Chen",
-    email: "david@example.com",
-    role: "Developer",
-    joinedDate: "2023-08-22",
-  },
-  {
-    _id: "3",
-    name: "Michelle Garcia",
-    email: "michelle@example.com",
-    role: "UI/UX Designer",
-    joinedDate: "2024-01-05",
-  },
-  {
-    _id: "4",
-    name: "Alex Thompson",
-    email: "alex@example.com",
-    role: "Data Analyst",
-    joinedDate: "2023-11-15",
-  },
-  {
-    _id: "5",
-    name: "Jordan Smith",
-    email: "jordan@example.com",
-    role: "Marketing Specialist",
-    joinedDate: "2023-07-03",
-  },
-];
+// const users = [
+//   {
+//     _id: "1",
+//     name: "Sarah Johnson",
+//     email: "sarah@example.com",
+//     role: "Product Manager",
+//     joinedDate: "2023-05-12",
+//   },
+//   {
+//     _id: "2",
+//     name: "David Chen",
+//     email: "david@example.com",
+//     role: "Developer",
+//     joinedDate: "2023-08-22",
+//   },
+//   {
+//     _id: "3",
+//     name: "Michelle Garcia",
+//     email: "michelle@example.com",
+//     role: "UI/UX Designer",
+//     joinedDate: "2024-01-05",
+//   },
+//   {
+//     _id: "4",
+//     name: "Alex Thompson",
+//     email: "alex@example.com",
+//     role: "Data Analyst",
+//     joinedDate: "2023-11-15",
+//   },
+//   {
+//     _id: "5",
+//     name: "Jordan Smith",
+//     email: "jordan@example.com",
+//     role: "Marketing Specialist",
+//     joinedDate: "2023-07-03",
+//   },
+// ];
 
 const usersAttendance = [
   {
@@ -158,14 +158,6 @@ export default function EmployeeAttendance() {
   const [usersData, setUsersData] = useState([]);
 
   // Filter users based on search query
-  const filteredUsers = useMemo(() => {
-    return usersData.filter(
-      (user) =>
-        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.role.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [searchQuery]);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -180,6 +172,15 @@ export default function EmployeeAttendance() {
 
     fetchUsers();
   }, []);
+
+  const filteredUsers = useMemo(() => {
+    return usersData.filter(
+      (user) =>
+        user?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user?.role?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -341,7 +342,7 @@ export default function EmployeeAttendance() {
       <div className="flex flex-1 max-h-[calc(100vh-64px)]">
         {/* Left panel - Employee Selection */}
         <motion.div
-          className="w-1/4 p-4 border-r border-gray-200 dark:border-gray-700"
+          className="w-1/4 p-4 border-r border-gray-200 dark:border-gray-700 min-h-[45rem]"
           initial={{ x: -50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.4 }}
@@ -364,11 +365,11 @@ export default function EmployeeAttendance() {
                 {selectedUser ? (
                   <div className="flex items-center">
                     <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white mr-3">
-                      {selectedUser.name.charAt(0)}
+                      {selectedUser.fullName.charAt(0)}
                     </div>
                     <div>
                       <div className="font-medium dark:text-white">
-                        {selectedUser.name}
+                        {selectedUser.fullName}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         {selectedUser.role}
@@ -428,7 +429,7 @@ export default function EmployeeAttendance() {
                     </div>
 
                     {/* User List */}
-                    <div className="max-h-64 overflow-y-auto">
+                    <div className="max-h-[45rem] overflow-y-auto">
                       {filteredUsers.length > 0 ? (
                         <ul>
                           {filteredUsers.map((user, index) => (
@@ -453,10 +454,12 @@ export default function EmployeeAttendance() {
                               }`}
                             >
                               <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white mr-3">
-                                {user.name.charAt(0)}
+                                {user.fullName.charAt(0)}
                               </div>
                               <div>
-                                <div className="font-medium">{user.name}</div>
+                                <div className="font-medium">
+                                  {user.fullName}
+                                </div>
                                 <div className="text-sm text-gray-500 dark:text-gray-400">
                                   {user.role}
                                 </div>
@@ -607,10 +610,12 @@ export default function EmployeeAttendance() {
                     transition={{ duration: 0.3, delay: 0.2 }}
                     className="flex items-center justify-center h-12 w-12 rounded-full bg-white text-blue-600 text-xl font-bold mr-4"
                   >
-                    {selectedUser.name.charAt(0)}
+                    {selectedUser.fullName.charAt(0)}
                   </motion.div>
                   <div>
-                    <h2 className="text-xl font-bold">{selectedUser.name}</h2>
+                    <h2 className="text-xl font-bold">
+                      {selectedUser.fullName}
+                    </h2>
                     <div className="flex text-sm text-blue-100">
                       <span>{selectedUser.role}</span>
                       <span className="mx-2">•</span>
