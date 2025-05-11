@@ -219,6 +219,7 @@ export const getUserAttendanceByDateRange = async (
  * @param {string} userId - ID of the user
  * @returns {Promise<Object>} - User's attendance object
  */
+// Modified getAttendanceByUserId function to handle missing records
 export const getAttendanceByUserId = async (userId) => {
   try {
     const attendanceRef = collection(db, "attendances");
@@ -228,7 +229,11 @@ export const getAttendanceByUserId = async (userId) => {
     const attendanceSnapshot = await getDocs(attendanceQuery);
 
     if (attendanceSnapshot.empty) {
-      throw new Error("No attendance record found for this user.");
+      // Return empty attendance structure instead of throwing an error
+      return {
+        userId: userId,
+        attendances: [],
+      };
     }
 
     // Assuming userId is unique, return the first (and only) document
@@ -347,13 +352,87 @@ export const updateDailyAttendanceStatus = async () => {
  * @param {Object} attendanceData - New attendance data
  * @returns {Promise<void>}
  */
-export const updateAttendance = async (attendanceId, attendanceData) => {
+// Modified updateAttendance function to create records if they don't exist
+export const updateAttendance = async (payload) => {
   try {
-    const attendanceRef = doc(db, "attendance", attendanceId);
-    await updateDoc(attendanceRef, {
-      ...attendanceData,
-      updatedAt: serverTimestamp(),
-    });
+    // Check if there's an existing attendance record
+    const attendanceRef = collection(db, "attendances");
+    const attendanceQuery = query(
+      attendanceRef,
+      where("userId", "==", payload.userId)
+    );
+    const attendanceSnapshot = await getDocs(attendanceQuery);
+
+    if (attendanceSnapshot.empty) {
+      // Create a new attendance record for this user
+      const newAttendanceData = {
+        userId: payload.userId,
+        attendances: [
+          {
+            _id: payload._id || new Date().getTime().toString(),
+            date: payload.date,
+            status: payload.status,
+            checkIn: payload.checkIn,
+            checkOut: payload.checkOut,
+            notes: payload.notes,
+          },
+        ],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      const docRef = await addDoc(
+        collection(db, "attendances"),
+        newAttendanceData
+      );
+      return {
+        ...newAttendanceData.attendances[0],
+        id: docRef.id,
+      };
+    } else {
+      // Get the existing attendance document
+      const attendanceDoc = attendanceSnapshot.docs[0];
+      const attendanceData = attendanceDoc.data();
+      const attendances = attendanceData.attendances || [];
+
+      // Find if we're updating an existing attendance entry
+      const existingIndex = attendances.findIndex((a) =>
+        a.date.startsWith(payload.date)
+      );
+
+      if (existingIndex >= 0) {
+        // Update existing entry
+        attendances[existingIndex] = {
+          ...attendances[existingIndex],
+          status: payload.status,
+          checkIn: payload.checkIn,
+          checkOut: payload.checkOut,
+          notes: payload.notes,
+          _id: payload._id || attendances[existingIndex]._id,
+        };
+      } else {
+        // Add new entry
+        attendances.push({
+          _id: payload._id || new Date().getTime().toString(),
+          date: payload.date,
+          status: payload.status,
+          checkIn: payload.checkIn,
+          checkOut: payload.checkOut,
+          notes: payload.notes,
+        });
+      }
+
+      // Update the document
+      await updateDoc(doc(db, "attendances", attendanceDoc.id), {
+        attendances: attendances,
+        updatedAt: serverTimestamp(),
+      });
+
+      // Return the updated/added entry
+      const entryIndex =
+        existingIndex >= 0 ? existingIndex : attendances.length - 1;
+      return attendances[entryIndex];
+    }
   } catch (error) {
     console.error("Error updating attendance: ", error);
     throw error;
