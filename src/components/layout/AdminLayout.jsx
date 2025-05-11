@@ -29,8 +29,8 @@ const navItems = [
   { name: "Users", icon: Users, href: "/admin/users" },
   { name: "Attendance", icon: CalendarDays, href: "/admin/attendance" },
   { name: "Reports", icon: FileText, href: "/admin/reports" },
-  { name: "Admin Punch In", icon: Clock, href: "/admin/punchin" },
-  { name: "Employee Punch In", icon: Clock, href: "/employee/punchin" },
+  { name: "Admin Log", icon: CheckCheck, href: "/admin/punchin" }, // changed from "Admin Punch In"
+  { name: "Employee Log", icon: Clock, href: "/employee/punchin" }, // changed from "Employee Punch In"
 ];
 
 // Sample notification data
