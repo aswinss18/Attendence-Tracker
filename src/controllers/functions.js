@@ -214,6 +214,11 @@ export const getUserAttendanceByDateRange = async (
   }
 };
 
+/**
+ * Get attendance record for a specific user by their ID
+ * @param {string} userId - ID of the user
+ * @returns {Promise<Object>} - User's attendance object
+ */
 export const getAttendanceByUserId = async (userId) => {
   try {
     const attendanceRef = collection(db, "attendances");
@@ -234,6 +239,104 @@ export const getAttendanceByUserId = async (userId) => {
     };
   } catch (error) {
     console.error("Error fetching attendance: ", error);
+    throw error;
+  }
+};
+
+/**
+ * Get attendance record for a specific user by their ID and a specific date
+ * @param {string} userId - ID of the user
+ * @param {string} date - Date in ISO format (YYYY-MM-DD)
+ * @returns {Promise<Object|null>} - Attendance record for that date or null if not found
+ */
+export const getAttendanceByUserIdAndDate = async (userId, date) => {
+  try {
+    // First get the user's attendance record
+    const userAttendanceRecord = await getAttendanceByUserId(userId);
+
+    // Look for the specific date in the attendances array
+    const attendanceForDate = userAttendanceRecord.attendances.find(
+      (record) => record.date === date
+    );
+
+    // If we don't find an attendance record for today, create a default "leave" record
+    if (!attendanceForDate && date === new Date().toISOString().split("T")[0]) {
+      return {
+        _id: `temp_${userId}_${date}`,
+        date: date,
+        status: "leave",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isDefaultRecord: true, // Flag to indicate this is an auto-generated record
+      };
+    }
+
+    return attendanceForDate || null;
+  } catch (error) {
+    console.error("Error fetching attendance by date: ", error);
+    throw error;
+  }
+};
+
+/**
+ * Update daily attendance status for all users
+ * Sets default status as "leave" for current day if no record exists
+ * This should be run once daily via a scheduled job
+ * @returns {Promise<void>}
+ */
+export const updateDailyAttendanceStatus = async () => {
+  try {
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+    const users = await getAllUsers();
+    const attendanceRef = collection(db, "attendances");
+
+    // Process each user
+    for (const user of users) {
+      // Get user's attendance record
+      const attendanceQuery = query(
+        attendanceRef,
+        where("userId", "==", user._id)
+      );
+      const attendanceSnapshot = await getDocs(attendanceQuery);
+
+      if (!attendanceSnapshot.empty) {
+        const attendanceDoc = attendanceSnapshot.docs[0];
+        const attendanceData = attendanceDoc.data();
+
+        // Check if an attendance record for today already exists
+        const existingRecord = attendanceData.attendances.find(
+          (record) => record.date === today
+        );
+
+        // If no record exists for today, create a default "leave" record
+        if (!existingRecord) {
+          const newRecord = {
+            _id: `${user._id}_${today}`,
+            date: today,
+            status: "leave",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          // Add the new record to the attendances array
+          attendanceData.attendances.push(newRecord);
+
+          // Update the document in Firestore
+          await updateDoc(doc(db, "attendances", attendanceDoc.id), {
+            attendances: attendanceData.attendances,
+            updatedAt: serverTimestamp(),
+          });
+
+          console.log(
+            `Created default "leave" attendance for user ${user._id} on ${today}`
+          );
+        }
+      }
+    }
+
+    console.log("Daily attendance status update completed");
+  } catch (error) {
+    console.error("Error updating daily attendance status: ", error);
     throw error;
   }
 };
@@ -308,10 +411,36 @@ export const seedAttendance = async (attendanceData) => {
     for (const userAttendance of attendanceData) {
       const { userId, attendances } = userAttendance;
 
+      // Create or update the attendance document in the attendances collection
+      const attendanceRef = collection(db, "attendances");
+      const attendanceQuery = query(
+        attendanceRef,
+        where("userId", "==", userId)
+      );
+      const attendanceSnapshot = await getDocs(attendanceQuery);
+
+      if (attendanceSnapshot.empty) {
+        // Create new document if none exists
+        await addDoc(attendanceRef, {
+          userId,
+          attendances,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        // Update existing document
+        const attendanceDoc = attendanceSnapshot.docs[0];
+        await updateDoc(doc(db, "attendances", attendanceDoc.id), {
+          attendances,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      // Also add individual attendance records for backwards compatibility
       for (const attendance of attendances) {
         const { _id, ...attendanceDetails } = attendance;
-        const attendanceRef = doc(db, "attendance", _id);
-        await setDoc(attendanceRef, {
+        const singleAttendanceRef = doc(db, "attendance", _id);
+        await setDoc(singleAttendanceRef, {
           userId,
           ...attendanceDetails,
           createdAt: serverTimestamp(),
@@ -319,6 +448,7 @@ export const seedAttendance = async (attendanceData) => {
         });
       }
     }
+
     console.log("Attendance records seeded successfully");
   } catch (error) {
     console.error("Error seeding attendance: ", error);
@@ -348,6 +478,7 @@ export const getUserAttendanceStats = async (userId, startDate, endDate) => {
       present: 0,
       remote: 0,
       absent: 0,
+      leave: 0,
       averageCheckInTime: null,
       averageCheckOutTime: null,
       totalWorkHours: 0,
@@ -362,6 +493,7 @@ export const getUserAttendanceStats = async (userId, startDate, endDate) => {
       if (record.status === "present") stats.present++;
       else if (record.status === "remote") stats.remote++;
       else if (record.status === "absent") stats.absent++;
+      else if (record.status === "leave") stats.leave++;
 
       // Calculate average check-in/out times
       if (record.checkIn && record.checkOut) {
@@ -448,19 +580,38 @@ export const getTeamAttendanceOverview = async (startDate, endDate) => {
       attendanceByUser[record.userId].push(record);
     });
 
-    // Calculate team stats
+    // Check if it's today's attendance
+    const isTodayAttendance =
+      startDate === endDate &&
+      new Date(startDate).toDateString() === new Date().toDateString();
+
+    let notMarkedToday = [];
+
+    if (isTodayAttendance) {
+      const markedTodayIds = new Set(attendanceRecords.map((r) => r.userId));
+      notMarkedToday = users.filter((user) => !markedTodayIds.has(user._id));
+    }
+
+    // Initialize team stats
     const teamStats = {
       totalEmployees: users.length,
       presentPercentage: 0,
       remotePercentage: 0,
       absentPercentage: 0,
+      leavePercentage: 0,
       averageWorkHours: 0,
       userStats: [],
+      notMarkedToday: notMarkedToday.map((user) => ({
+        userId: user._id,
+        fullName: user.fullName,
+        role: user.role,
+      })),
     };
 
     let totalPresent = 0;
     let totalRemote = 0;
     let totalAbsent = 0;
+    let totalLeave = 0;
     let totalWorkHours = 0;
     let totalRecords = 0;
 
@@ -471,12 +622,14 @@ export const getTeamAttendanceOverview = async (startDate, endDate) => {
       let userPresent = 0;
       let userRemote = 0;
       let userAbsent = 0;
+      let userLeave = 0;
       let userWorkHours = 0;
 
       userAttendance.forEach((record) => {
         if (record.status === "present") userPresent++;
         else if (record.status === "remote") userRemote++;
         else if (record.status === "absent") userAbsent++;
+        else if (record.status === "leave") userLeave++;
 
         if (record.checkIn && record.checkOut) {
           const checkInDate = new Date(record.checkIn);
@@ -490,18 +643,20 @@ export const getTeamAttendanceOverview = async (startDate, endDate) => {
       totalPresent += userPresent;
       totalRemote += userRemote;
       totalAbsent += userAbsent;
+      totalLeave += userLeave;
       totalWorkHours += userWorkHours;
       totalRecords += userAttendance.length;
 
       // Add user stats to team stats
       teamStats.userStats.push({
         userId: user._id,
-        name: user.name,
+        fullName: user.fullName,
         role: user.role,
         totalDays: userAttendance.length,
         present: userPresent,
         remote: userRemote,
         absent: userAbsent,
+        leave: userLeave,
         workHours: parseFloat(userWorkHours.toFixed(2)),
       });
     }
@@ -516,6 +671,9 @@ export const getTeamAttendanceOverview = async (startDate, endDate) => {
       );
       teamStats.absentPercentage = parseFloat(
         ((totalAbsent / totalRecords) * 100).toFixed(2)
+      );
+      teamStats.leavePercentage = parseFloat(
+        ((totalLeave / totalRecords) * 100).toFixed(2)
       );
       teamStats.averageWorkHours = parseFloat(
         (totalWorkHours / totalRecords).toFixed(2)

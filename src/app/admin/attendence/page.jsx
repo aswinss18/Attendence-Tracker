@@ -12,112 +12,14 @@ import {
   X,
   Calendar,
   ExternalLink,
+  CalendarClock,
 } from "lucide-react";
-
-// Simulated data - would be imported in real app
-const users = [
-  {
-    _id: "1",
-    name: "Sarah Johnson",
-    email: "sarah@example.com",
-    role: "Product Manager",
-    joinedDate: "2023-05-12",
-  },
-  {
-    _id: "2",
-    name: "David Chen",
-    email: "david@example.com",
-    role: "Developer",
-    joinedDate: "2023-08-22",
-  },
-  {
-    _id: "3",
-    name: "Michelle Garcia",
-    email: "michelle@example.com",
-    role: "UI/UX Designer",
-    joinedDate: "2024-01-05",
-  },
-  {
-    _id: "4",
-    name: "Alex Thompson",
-    email: "alex@example.com",
-    role: "Data Analyst",
-    joinedDate: "2023-11-15",
-  },
-  {
-    _id: "5",
-    name: "Jordan Smith",
-    email: "jordan@example.com",
-    role: "Marketing Specialist",
-    joinedDate: "2023-07-03",
-  },
-  {
-    _id: "6",
-    name: "Emily Williams",
-    email: "emily@example.com",
-    role: "Frontend Developer",
-    joinedDate: "2023-09-18",
-  },
-  {
-    _id: "7",
-    name: "Marcus Lee",
-    email: "marcus@example.com",
-    role: "Backend Developer",
-    joinedDate: "2024-02-10",
-  },
-  {
-    _id: "8",
-    name: "Sophia Rodriguez",
-    email: "sophia@example.com",
-    role: "Project Coordinator",
-    joinedDate: "2023-10-05",
-  },
-];
-
-// Today's attendance data (simulated)
-const todayAttendance = [
-  {
-    userId: "1",
-    status: "present",
-    checkIn: "2025-05-01T08:45:00",
-    checkOut: null,
-  },
-  {
-    userId: "2",
-    status: "remote",
-    checkIn: "2025-05-01T09:10:00",
-    checkOut: null,
-  },
-  {
-    userId: "3",
-    status: "present",
-    checkIn: "2025-05-01T08:30:00",
-    checkOut: null,
-  },
-  { userId: "4", status: "absent", reason: "Sick leave" },
-  {
-    userId: "5",
-    status: "present",
-    checkIn: "2025-05-01T08:55:00",
-    checkOut: null,
-  },
-  {
-    userId: "6",
-    status: "remote",
-    checkIn: "2025-05-01T09:05:00",
-    checkOut: null,
-  },
-  { userId: "7", status: "absent", reason: "Vacation" },
-  {
-    userId: "8",
-    status: "present",
-    checkIn: "2025-05-01T08:50:00",
-    checkOut: null,
-  },
-];
+import { getTeamAttendanceOverview } from "@/controllers/functions";
 
 export default function TodayAttendanceOverview() {
-  const [darkMode, setDarkMode] = useState(false);
+  const [attendanceData, setAttendanceData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -132,29 +34,98 @@ export default function TodayAttendanceOverview() {
     });
   }, []);
 
-  // Compute attendance statistics
-  const stats = useMemo(() => {
-    return {
-      present: todayAttendance.filter((a) => a.status === "present").length,
-      remote: todayAttendance.filter((a) => a.status === "remote").length,
-      absent: todayAttendance.filter((a) => a.status === "absent").length,
-      total: todayAttendance.length,
-    };
+  // Format today's date for API call
+  const todayFormatted = useMemo(() => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
   }, []);
 
-  // Get attendance status with user details
-  const attendanceWithUserDetails = useMemo(() => {
-    return todayAttendance.map((attendance) => {
-      const user = users.find((u) => u._id === attendance.userId);
-      return { ...attendance, ...user };
+  // Fetch attendance data on component mount
+  useEffect(() => {
+    const fetchAttendanceData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getTeamAttendanceOverview(
+          todayFormatted,
+          todayFormatted
+        );
+        setAttendanceData(data);
+      } catch (err) {
+        console.error("Failed to fetch attendance data:", err);
+        setError("Failed to load attendance data. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAttendanceData();
+  }, [todayFormatted]);
+
+  // Compute attendance statistics from real data
+  const stats = useMemo(() => {
+    if (!attendanceData) {
+      return {
+        total: 0,
+        present: 0,
+        remote: 0,
+        absent: 0,
+        leave: 0,
+        presentPercentage: 0,
+        remotePercentage: 0,
+        absentPercentage: 0,
+        leavePercentage: 0,
+      };
+    }
+
+    return {
+      total: attendanceData.totalEmployees || 0,
+      present: attendanceData.userStats.filter((user) => user.present > 0)
+        .length,
+      remote: attendanceData.userStats.filter((user) => user.remote > 0).length,
+      absent: attendanceData.userStats.filter((user) => user.absent > 0).length,
+      leave: attendanceData.userStats.filter((user) => user.leave > 0).length,
+      presentPercentage: attendanceData.presentPercentage || 0,
+      remotePercentage: attendanceData.remotePercentage || 0,
+      absentPercentage: attendanceData.absentPercentage || 0,
+      leavePercentage: attendanceData.leavePercentage || 0,
+    };
+  }, [attendanceData]);
+
+  // Map users to their attendance status for display
+  const usersWithAttendance = useMemo(() => {
+    if (!attendanceData) return [];
+
+    // Create status objects for each user
+    return attendanceData.userStats.map((user) => {
+      // Determine primary status (prioritizing present > remote > leave > absent)
+      let status = "not_marked";
+      if (user.present > 0) status = "present";
+      else if (user.remote > 0) status = "remote";
+      else if (user.leave > 0) status = "leave";
+      else if (user.absent > 0) status = "absent";
+
+      return {
+        userId: user.userId,
+        fullName: user.fullName,
+        role: user.role,
+        status,
+        workHours: user.workHours || 0,
+        // We don't have check-in/check-out times in the data structure
+        // You may need to add this if available in your actual implementation
+      };
     });
-  }, []);
+  }, [attendanceData]);
 
   // Filter and search
-  const filteredAttendance = useMemo(() => {
-    return attendanceWithUserDetails.filter((record) => {
+  const filteredUsers = useMemo(() => {
+    if (!usersWithAttendance.length) return [];
+
+    return usersWithAttendance.filter((user) => {
       // Status filter
-      if (filterStatus !== "all" && record.status !== filterStatus) {
+      if (filterStatus !== "all" && user.status !== filterStatus) {
         return false;
       }
 
@@ -162,15 +133,14 @@ export default function TodayAttendanceOverview() {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         return (
-          record.name?.toLowerCase().includes(query) ||
-          record.email?.toLowerCase().includes(query) ||
-          record.role?.toLowerCase().includes(query)
+          user.fullName?.toLowerCase().includes(query) ||
+          user.role?.toLowerCase().includes(query)
         );
       }
 
       return true;
     });
-  }, [attendanceWithUserDetails, filterStatus, searchQuery]);
+  }, [usersWithAttendance, filterStatus, searchQuery]);
 
   // Group by status
   const groupedByStatus = useMemo(() => {
@@ -178,16 +148,23 @@ export default function TodayAttendanceOverview() {
       present: [],
       remote: [],
       absent: [],
+      leave: [],
+      not_marked: [],
     };
 
-    filteredAttendance.forEach((record) => {
-      if (groups[record.status]) {
-        groups[record.status].push(record);
+    filteredUsers.forEach((user) => {
+      if (groups[user.status]) {
+        groups[user.status].push(user);
       }
     });
 
     return groups;
-  }, [filteredAttendance]);
+  }, [filteredUsers]);
+
+  // Get not marked users
+  const notMarkedUsers = useMemo(() => {
+    return attendanceData?.notMarkedToday || [];
+  }, [attendanceData]);
 
   // Status icon component
   const StatusIcon = ({ status, size = 16 }) => {
@@ -198,6 +175,10 @@ export default function TodayAttendanceOverview() {
         return <Monitor size={size} className="text-sky-500" />;
       case "absent":
         return <AlertCircle size={size} className="text-rose-500" />;
+      case "leave":
+        return <CalendarClock size={size} className="text-amber-500" />;
+      case "not_marked":
+        return <Clock size={size} className="text-gray-400" />;
       default:
         return null;
     }
@@ -205,21 +186,34 @@ export default function TodayAttendanceOverview() {
 
   // Calculate percentage for stats
   const getPercentage = (count) => {
-    return Math.round((count / stats.total) * 100);
+    return stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
   };
 
-  // Get time passed since check in
-  const getTimeElapsed = (checkInTime) => {
-    if (!checkInTime) return "--";
+  // Format work hours
+  const formatWorkHours = (hours) => {
+    if (!hours || hours === 0) return "--";
 
-    const checkIn = new Date(checkInTime);
-    const now = new Date();
-    const diffMs = now - checkIn;
-    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const wholeHours = Math.floor(hours);
+    const minutes = Math.round((hours - wholeHours) * 60);
 
-    return `${diffHrs}h ${diffMins}m`;
+    return `${wholeHours}h ${minutes}m`;
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-lg">
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900">
@@ -366,7 +360,7 @@ export default function TodayAttendanceOverview() {
           </div>
 
           {/* Filter */}
-          <div className="flex space-x-2 w-full sm:w-auto">
+          <div className="flex space-x-2 w-full sm:w-auto overflow-x-auto py-1">
             <button
               onClick={() => setFilterStatus("all")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -407,6 +401,16 @@ export default function TodayAttendanceOverview() {
             >
               <AlertCircle size={14} className="mr-1" /> Absent
             </button>
+            <button
+              onClick={() => setFilterStatus("not_marked")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center ${
+                filterStatus === "not_marked"
+                  ? "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
+            >
+              <Clock size={14} className="mr-1" /> Not Marked
+            </button>
           </div>
         </motion.div>
 
@@ -437,9 +441,9 @@ export default function TodayAttendanceOverview() {
 
             <div className="divide-y dark:divide-gray-700 max-h-96 overflow-y-auto">
               {groupedByStatus.present.length > 0 ? (
-                groupedByStatus.present.map((record, index) => (
+                groupedByStatus.present.map((user, index) => (
                   <motion.div
-                    key={record.userId}
+                    key={user.userId}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 * index }}
@@ -447,28 +451,22 @@ export default function TodayAttendanceOverview() {
                   >
                     <div className="flex items-center">
                       <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 text-white mr-3">
-                        {record.name?.charAt(0)}
+                        {user.fullName?.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-gray-900 dark:text-white truncate">
-                          {record.name}
+                          {user.fullName}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {record.role}
+                          {user.role}
                         </div>
                       </div>
                       <div className="flex flex-col items-end">
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Checked in
+                          Work Hours
                         </div>
-                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {new Date(record.checkIn).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </div>
-                        <div className="text-xs text-emerald-500">
-                          {getTimeElapsed(record.checkIn)} elapsed
+                        <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                          {formatWorkHours(user.workHours)}
                         </div>
                       </div>
                     </div>
@@ -502,9 +500,9 @@ export default function TodayAttendanceOverview() {
 
             <div className="divide-y dark:divide-gray-700 max-h-96 overflow-y-auto">
               {groupedByStatus.remote.length > 0 ? (
-                groupedByStatus.remote.map((record, index) => (
+                groupedByStatus.remote.map((user, index) => (
                   <motion.div
-                    key={record.userId}
+                    key={user.userId}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 * index }}
@@ -512,28 +510,22 @@ export default function TodayAttendanceOverview() {
                   >
                     <div className="flex items-center">
                       <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-sky-500 to-blue-600 text-white mr-3">
-                        {record.name?.charAt(0)}
+                        {user.fullName?.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-gray-900 dark:text-white truncate">
-                          {record.name}
+                          {user.fullName}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {record.role}
+                          {user.role}
                         </div>
                       </div>
                       <div className="flex flex-col items-end">
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Checked in
+                          Work Hours
                         </div>
-                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {new Date(record.checkIn).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </div>
-                        <div className="text-xs text-sky-500">
-                          {getTimeElapsed(record.checkIn)} elapsed
+                        <div className="text-sm font-medium text-sky-600 dark:text-sky-400">
+                          {formatWorkHours(user.workHours)}
                         </div>
                       </div>
                     </div>
@@ -567,9 +559,9 @@ export default function TodayAttendanceOverview() {
 
             <div className="divide-y dark:divide-gray-700 max-h-96 overflow-y-auto">
               {groupedByStatus.absent.length > 0 ? (
-                groupedByStatus.absent.map((record, index) => (
+                groupedByStatus.absent.map((user, index) => (
                   <motion.div
-                    key={record.userId}
+                    key={user.userId}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 * index }}
@@ -577,21 +569,16 @@ export default function TodayAttendanceOverview() {
                   >
                     <div className="flex items-center">
                       <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-rose-500 to-red-600 text-white mr-3">
-                        {record.name?.charAt(0)}
+                        {user.fullName?.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-gray-900 dark:text-white truncate">
-                          {record.name}
+                          {user.fullName}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {record.role}
+                          {user.role}
                         </div>
                       </div>
-                      {record.reason && (
-                        <div className="bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 text-xs px-2 py-1 rounded">
-                          {record.reason}
-                        </div>
-                      )}
                     </div>
                   </motion.div>
                 ))
@@ -603,6 +590,63 @@ export default function TodayAttendanceOverview() {
             </div>
           </div>
         </motion.div>
+
+        {/* Not Marked Today Section */}
+        {filterStatus === "all" || filterStatus === "not_marked" ? (
+          <motion.div
+            className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            <div className="bg-gray-200 dark:bg-gray-700 py-3 px-4 flex items-center justify-between">
+              <div className="flex items-center">
+                <Clock
+                  size={18}
+                  className="mr-2 text-gray-600 dark:text-gray-300"
+                />
+                <h3 className="font-semibold text-gray-700 dark:text-gray-200">
+                  Not Marked Today
+                </h3>
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                {notMarkedUsers.length} employees
+              </div>
+            </div>
+
+            <div className="p-4">
+              {notMarkedUsers.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {notMarkedUsers.map((user, index) => (
+                    <motion.div
+                      key={user.userId}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.03 * index }}
+                      className="bg-gray-50 dark:bg-gray-750 rounded p-3 flex items-center"
+                    >
+                      <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 mr-3">
+                        {user.fullName?.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-800 dark:text-gray-200">
+                          {user.fullName}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {user.role}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                  All employees have marked their attendance today
+                </div>
+              )}
+            </div>
+          </motion.div>
+        ) : null}
 
         {/* Actions */}
         <motion.div

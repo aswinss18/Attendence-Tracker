@@ -27,7 +27,8 @@ import CustomToast from "@/components/common/Toast";
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
   { name: "Users", icon: Users, href: "/admin/users" },
-  { name: "Attendance", icon: CalendarDays, href: "/admin/attendence" },
+  { name: "Attendance", icon: CalendarDays, href: "/admin/attendance" },
+  { name: "Punch In", icon: Clock, href: "/punchin" },
   { name: "Reports", icon: FileText, href: "/admin/reports" },
 ];
 
