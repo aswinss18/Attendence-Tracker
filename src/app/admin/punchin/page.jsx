@@ -125,13 +125,6 @@ export default function EmployeeAttendance() {
   }, []);
 
   // Toggle dark mode
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [darkMode]);
 
   // Effect to fetch attendance data when user is selected
   useEffect(() => {
@@ -400,16 +393,6 @@ export default function EmployeeAttendance() {
         <h1 className="text-xl font-bold text-gray-800 dark:text-white">
           Employee Attendance Dashboard
         </h1>
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-        >
-          {darkMode ? (
-            <Sun size={20} className="text-yellow-400" />
-          ) : (
-            <Moon size={20} className="text-gray-600" />
-          )}
-        </button>
       </motion.div>
 
       {/* Main Content */}
@@ -843,7 +826,7 @@ export default function EmployeeAttendance() {
                           // Handle today's date
                           if (day.isToday) {
                             bgColor +=
-                              " ring-2 ring-blue-500 dark:ring-blue-400";
+                              " ring-2 ring-yellow-500 dark:ring-yellow-400 bg-yellow-50 dark:bg-yellow-100/20";
                           }
 
                           // Handle selected day
@@ -859,7 +842,7 @@ export default function EmployeeAttendance() {
                               key={day.date}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
-                              className={`aspect-square rounded-lg ${bgColor} p-1 flex flex-col items-center justify-center cursor-pointer transition-colors duration-200`}
+                              className={`aspect-square relative rounded-lg ${bgColor} p-1 flex flex-col items-center justify-center cursor-pointer transition-colors duration-200`}
                               onClick={() => handleDayClick(day)}
                             >
                               <span
@@ -869,6 +852,13 @@ export default function EmployeeAttendance() {
                               </span>
                               {day.status !== "no-data" && (
                                 <StatusIcon status={day.status} size={14} />
+                              )}
+                              {day.isToday && (
+                                <span
+                                  className={`text-sm font-sm translate-y-1 ${textColor}`}
+                                >
+                                  Today
+                                </span>
                               )}
                             </motion.button>
                           );
