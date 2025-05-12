@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   Users,
   CalendarDays,
-  PlaneTakeoff,
   FileText,
   Menu,
   X,
@@ -28,9 +27,8 @@ const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
   { name: "Users", icon: Users, href: "/admin/users" },
   { name: "Attendance", icon: CalendarDays, href: "/admin/attendance" },
-  { name: "Reports", icon: FileText, href: "/admin/reports" },
-  { name: "Admin Log", icon: CheckCheck, href: "/admin/punchin" }, // changed from "Admin Punch In"
-  { name: "Employee Log", icon: Clock, href: "/employee/punchin" }, // changed from "Employee Punch In"
+  { name: "Reports", icon: FileText, href: "/admin/reports" }, // changed from "Admin Punch In"
+  { name: "Punch In", icon: CheckCheck, href: "/employee/punchin" }, // changed from "Employee Punch In"
 ];
 
 // Sample notification data
