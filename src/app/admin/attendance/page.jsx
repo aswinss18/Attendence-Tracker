@@ -227,7 +227,7 @@ export default function TodayAttendanceOverview() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold text-gray-800 dark:text-white">
-              Today's Attendance Overview
+              Today&apos;s Attendance Overview
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {currentDate}

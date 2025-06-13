@@ -106,15 +106,15 @@ export default function AdminLayout({ children }) {
       setUser(currentUser);
       setIsLoading(false);
 
-      // Redirect to home if not authenticated and not in loading state
-      if (!currentUser && !isLoading) {
+      // Redirect to home if not authenticated
+      if (!currentUser) {
         router.push("/");
       }
     });
 
     // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, [router]); // Only depend on router
+  }, [router]); // Removed isLoading dependency since it's not needed here
 
   // Fallback user data when real auth data is unavailable
   const displayUser = user
@@ -196,8 +196,10 @@ export default function AdminLayout({ children }) {
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
     }
-  }, []);
+  }, [darkMode]); // Added darkMode as dependency
 
   // Handle loading or unauthenticated state
   if (isLoading) {

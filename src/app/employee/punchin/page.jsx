@@ -308,7 +308,7 @@ const AttendancePage = () => {
         {/* Today's status */}
         <div className="p-6">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-            Today's Attendance
+            Today&apos;s Attendance
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

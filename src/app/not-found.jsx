@@ -31,7 +31,7 @@ export default function NotFound() {
       </motion.div>
       <h2 className="text-2xl font-bold mb-2">404 – Page Not Found</h2>
       <p className="text-sm max-w-md text-gray-500 dark:text-gray-400 italic mb-6">
-        "{message}"
+        &ldquo;{message}&rdquo;
       </p>
       <Link
         href="/"

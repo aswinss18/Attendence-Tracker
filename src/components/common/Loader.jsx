@@ -5,12 +5,12 @@ import { Loader as LoaderIcon } from "lucide-react";
 
 const quotes = [
   "Success is the sum of small efforts, repeated day in and day out.",
-  "Dreams don’t work unless you do.",
+  "Dreams don't work unless you do.",
   "The only way to do great work is to love what you do.",
   "Hustle in silence and let your success make the noise.",
   "Loading... Stay focused, stay hungry.",
   "Every line of code is a step toward greatness.",
-  "It always seems impossible until it’s done.",
+  "It always seems impossible until it's done.",
 ];
 
 export default function Loader() {
@@ -35,7 +35,7 @@ export default function Loader() {
       </motion.div>
       <h2 className="text-xl font-semibold mb-2">Loading...</h2>
       <p className="text-sm max-w-md text-gray-500 dark:text-gray-400 italic">
-        "{quote}"
+        &ldquo;{quote}&rdquo;
       </p>
     </div>
   );

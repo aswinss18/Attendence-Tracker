@@ -14,7 +14,7 @@ export default function UpcomingPage() {
           Something Cool is Coming...
         </h1>
         <p className="text-lg mt-10 text-gray-600 dark:text-gray-300 text-center">
-          We're crafting something special for you. Stay tuned!
+          We&rsquo;re crafting something special for you. Stay tuned!
         </p>
       </motion.div>
 

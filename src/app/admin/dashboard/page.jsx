@@ -68,40 +68,40 @@ export default function EmployeeAttendance() {
   }, []);
 
   // Add this additional useEffect to keep selected day in sync
-  useEffect(() => {
-    if (selectedDay && userAttendance && userAttendance.attendances) {
-      // Find the current data for this day in our attendance records
-      const currentDayData = userAttendance.attendances.find((record) =>
-        record.date.startsWith(selectedDay.date)
-      );
+ useEffect(() => {
+  if (selectedDay && userAttendance && userAttendance.attendances) {
+    // Find the current data for this day in our attendance records
+    const currentDayData = userAttendance.attendances.find((record) =>
+      record.date.startsWith(selectedDay.date)
+    );
 
-      // If we found updated data for the selected day, update the selectedDay state
-      if (currentDayData) {
-        setSelectedDay((prevDay) => ({
-          ...prevDay,
+    // If we found updated data for the selected day, update the selectedDay state
+    if (currentDayData) {
+      setSelectedDay((prevDay) => ({
+        ...prevDay,
+        status: currentDayData.status,
+        checkIn: currentDayData.checkIn,
+        checkOut: currentDayData.checkOut,
+        notes: currentDayData.notes,
+        _id: currentDayData._id,
+      }));
+
+      // Also update the edit form if we're in edit mode
+      if (isEditMode) {
+        setEditedAttendance({
           status: currentDayData.status,
-          checkIn: currentDayData.checkIn,
-          checkOut: currentDayData.checkOut,
-          notes: currentDayData.notes,
-          _id: currentDayData._id,
-        }));
-
-        // Also update the edit form if we're in edit mode
-        if (isEditMode) {
-          setEditedAttendance({
-            status: currentDayData.status,
-            checkIn: currentDayData.checkIn
-              ? new Date(currentDayData.checkIn).toISOString().slice(0, 16)
-              : "",
-            checkOut: currentDayData.checkOut
-              ? new Date(currentDayData.checkOut).toISOString().slice(0, 16)
-              : "",
-            notes: currentDayData.notes || "",
-          });
-        }
+          checkIn: currentDayData.checkIn
+            ? new Date(currentDayData.checkIn).toISOString().slice(0, 16)
+            : "",
+          checkOut: currentDayData.checkOut
+            ? new Date(currentDayData.checkOut).toISOString().slice(0, 16)
+            : "",
+          notes: currentDayData.notes || "",
+        });
       }
     }
-  }, [userAttendance, selectedDay?.date, isEditMode]);
+  }
+}, [userAttendance, selectedDay?.date, isEditMode]);
 
   const filteredUsers = useMemo(() => {
     return usersData.filter(
